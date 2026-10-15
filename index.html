@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book & Byte Loading Screen</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=58DjyIxZOnqg&format=png&color=000000">
+    <!-- Tailwind CSS for utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Importing Minecraft style pixel font -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+      /* Pure black background and pixel font */
+      body {
+        margin: 0;
+        background-color: #000000;
+        font-family: 'Press Start 2P', monospace;
+        color: #ffffff;
+        overflow: hidden;
+      }
+
+      #loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #000000; /* Absolute pure black background */
+        transition: opacity 0.8s ease, visibility 0.8s ease;
+      }
+
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: min(420px, 90vw);
+      }
+
+      /* Minecraft Mojang-style or classic title / logo area */
+      .loading-title {
+        font-size: clamp(18px, 4.5vw, 24px);
+        letter-spacing: 3px;
+        margin-bottom: 28px;
+        color: #ffffff;
+        text-shadow: 3px 3px #222222;
+        text-align: center;
+      }
+
+      /* Minecraft style progress bar box */
+      .loading-bar-border {
+        width: 100%;
+        height: 26px;
+        padding: 4px;
+        background-color: #111111;
+        border: 4px solid #333333;
+        box-shadow: inset 0 0 0 2px #000000;
+      }
+
+      .loading-bar-fill {
+        width: 0%;
+        height: 100%;
+        background: repeating-linear-gradient(
+          90deg,
+          #5b9c2b 0px,
+          #5b9c2b 12px,
+          #73be38 12px,
+          #73be38 20px
+        );
+        transition: width 0.1s linear;
+      }
+
+      /* Status texts underneath */
+      .loading-info-row {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 14px;
+        font-size: 11px;
+        color: #aaaaaa;
+      }
+
+      #loading-status {
+        color: #cccccc;
+      }
+
+      #loading-percent {
+        color: #5b9c2b;
+      }
+
+      /* Minecraft random tips style small text at the bottom */
+      .minecraft-tip {
+        position: absolute;
+        bottom: 40px;
+        font-size: 10px;
+        color: #555555;
+        text-align: center;
+        padding: 0 20px;
+        max-width: 600px;
+        line-height: 1.6;
+      }
+
+      #loading-screen.hide {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      /* Replay button */
+      .mc-button {
+        background-color: #727272;
+        border: 3px solid;
+        border-color: #ffffff #373737 #373737 #ffffff;
+        box-shadow: inset -2px -2px #555555, inset 2px 2px #aaaaaa;
+        text-shadow: 2px 2px #222222;
+        font-family: 'Press Start 2P', monospace;
+        cursor: pointer;
+      }
+      .mc-button:hover {
+        background-color: #7b9ebc;
+        border-color: #ffffff #3b4e5e #3b4e5e #ffffff;
+      }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center bg-black">
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">
+    <div class="loading-container">
+      <div class="loading-title">Book & Byte</div>
+
+      <div class="loading-bar-border">
+        <div id="loading-fill" class="loading-bar-fill"></div>
+      </div>
+
+      <div class="loading-info-row">
+        <span id="loading-status">Generating terrain...</span>
+        <span id="loading-percent">0%</span>
+      </div>
+    </div>
+
+    <div id="minecraft-tip" class="minecraft-tip">
+      Tip: Creepers were created as a result of a coding error in the pig model.
+    </div>
+  </div>
+
+  <!-- MAIN SCREEN AFTER LOADING (Fallback if home.html isn't reached yet) -->
+  <div id="main-content" class="flex flex-col items-center justify-center space-y-6 opacity-0 transition-opacity duration-1000">
+    <h1 class="text-xl md:text-2xl text-white tracking-widest text-center">
+      WORLD LOADED
+    </h1>
+    <p class="text-xs text-gray-500 text-center max-w-sm px-4">
+      You have successfully loaded into the black screen environment.
+    </p>
+    <button onclick="startLoading()" class="mc-button py-3 px-6 text-xs text-white mt-4">
+      Replay Loading
+    </button>
+  </div>
+
+  <script>
+    const loadingScreen = document.getElementById("loading-screen");
+    const loadingFill = document.getElementById("loading-fill");
+    const loadingStatus = document.getElementById("loading-status");
+    const loadingPercent = document.getElementById("loading-percent");
+    const minecraftTip = document.getElementById("minecraft-tip");
+    const mainContent = document.getElementById("main-content");
+
+    const statuses = [
+      "Building terrain...",
+      "Loading chunks...",
+      "Scanning for dungeons...",
+      "Generating features...",
+      "Joining world..."
+    ];
+
+    const tips = [
+      "Tip: Creepers were created as a result of a coding error in the pig model.",
+      "Tip: Don't dig straight down.",
+      "Tip: Beds can explode in the Nether and the End dimensions.",
+      "Tip: Placing torches stops hostile mobs from spawning in the dark.",
+      "Tip: Obsidian can only be mined with a diamond or netherite pickaxe."
+    ];
+
+    let progress = 0;
+    let timer = null;
+
+    function startLoading() {
+      progress = 0;
+      loadingScreen.classList.remove("hide");
+      mainContent.style.opacity = "0";
+
+      // Pick a random tip each time it loads
+      minecraftTip.textContent = tips[Math.floor(Math.random() * tips.length)];
+
+      if (timer) clearInterval(timer);
+
+      timer = setInterval(() => {
+        progress += Math.floor(Math.random() * 6) + 2;
+
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(timer);
+
+          loadingStatus.textContent = "Done!";
+          setTimeout(() => {
+            loadingScreen.classList.add("hide");
+            
+            // Smooth transition to home.html
+            setTimeout(() => {
+              window.location.href = "home.html";
+            }, 600);
+
+          }, 400);
+        } else {
+          let statusIndex = Math.min(statuses.length - 1, Math.floor((progress / 100) * statuses.length));
+          loadingStatus.textContent = statuses[statusIndex];
+        }
+
+        loadingFill.style.width = progress + "%";
+        loadingPercent.textContent = progress + "%";
+      }, 90);
+    }
+
+    // Run loading sequence on page load
+    window.onload = function() {
+      startLoading();
+    };
+  </script>
+</body>
+</html>
